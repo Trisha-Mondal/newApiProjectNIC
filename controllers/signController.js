@@ -8,10 +8,20 @@ require('dotenv').config();
 const registerUser = async(req, res) => {
     console.log(req.body);
     const { username, email, password } = req.body;
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !confirmPassword) {
         res.status(400);
         throw new Error("All fields are mandatory!");
     }
+
+    if (password !== confirmPassword) {
+        res.status(400);
+        throw new Error("Passwords do not match.");
+    }
+
+
+
+
+
     const userAvailable = await User.findOne({ email });
     if (userAvailable) {
         res.status(401);
