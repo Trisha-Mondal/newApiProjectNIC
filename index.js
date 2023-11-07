@@ -3,7 +3,12 @@ const express = require("express");
 const dotenv = require("dotenv").config();
 const app = express();
 //const errorHandler = require("./middleware/errorHandler");
-const port = process.env.PORT || 5000;
+//const port = process.env.PORT || 5000;
+
+const port = process.env.PORT || 8080;
+
+
+
 app.use(express.json());
 
 const connectToMongo = require("./conflig/db");

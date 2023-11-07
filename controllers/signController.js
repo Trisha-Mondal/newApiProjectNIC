@@ -2,12 +2,47 @@ const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/signModel");
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+
 require('dotenv').config();
+
+const generateAccessToken = (user) => {
+    return jwt.sign({ user }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "15m" });
+    console.log("generateAccessToken", generateAccessToken);
+};
+
+const sendResetEmail = (user, resetToken) => {
+    const transporter = nodemailer.createTransport({
+        service: process.env.EMAIL_SERVICE,
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+    const resetLink = `${"http://google.com"}/reset-password?token=${resetToken}`;
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: user.email,
+        subject: "Password Reset",
+        text: `Click the following link to reset your password: ${resetLink}`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.log(error);
+        } else {
+            console.log("Email sent: " + info.response);
+        }
+    });
+};
+
+
 
 
 const registerUser = async(req, res) => {
     console.log(req.body);
-    const { username, email, password } = req.body;
+    const { username, email, password, confirmPassword } = req.body;
     if (!username || !email || !password || !confirmPassword) {
         res.status(400);
         throw new Error("All fields are mandatory!");
@@ -77,7 +112,37 @@ const loginUser = asyncHandler(async(req, res) => {
     }
 });
 
+const forgotPassword = async(req, res) => {
+    const { email } = req.body;
+    if (!email) {
+        res.status(400);
+        throw new Error("Email is mandatory!");
+    }
+
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        res.status(404);
+        throw new Error("User not found.");
+    }
+
+    // Generate a reset token with an expiration time
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    const resetTokenExpiry = Date.now() + 3600000;
+    user.resetToken = resetToken;
+    user.resetTokenExpiry = resetTokenExpiry;
+    await user.save();
+
+    // Send an email with the reset token
+    sendResetEmail(user, resetToken);
+
+    res.status(200).json({ message: "Password reset instructions sent to your email." });
+};
 
 
 
-module.exports = { registerUser, loginUser };
+
+
+
+
+module.exports = { registerUser, loginUser, forgotPassword };
