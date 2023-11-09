@@ -15,7 +15,9 @@ const signSchema = mongoose.Schema({
             required: [true, "Please add the user password"],
         },
 
-    },
+        resetToken: String,
+        resetTokenExpiry: Date,
+    }
 
 
 

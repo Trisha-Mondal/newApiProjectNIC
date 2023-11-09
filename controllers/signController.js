@@ -126,14 +126,14 @@ const forgotPassword = async(req, res) => {
         throw new Error("User not found.");
     }
 
-    // Generate a reset token with an expiration time
+
     const resetToken = crypto.randomBytes(20).toString('hex');
     const resetTokenExpiry = Date.now() + 3600000;
     user.resetToken = resetToken;
     user.resetTokenExpiry = resetTokenExpiry;
     await user.save();
 
-    // Send an email with the reset token
+
     sendResetEmail(user, resetToken);
 
     res.status(200).json({ message: "Password reset instructions sent to your email." });
