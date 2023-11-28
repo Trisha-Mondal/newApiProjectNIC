@@ -4,12 +4,51 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/signModel");
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const { MailtrapClient } = require("mailtrap");
 
 require('dotenv').config();
 
+
+
+
+
+
+
+/* const mailtrapConfig = {
+    service: 'live.smtp.mailtrap.io',
+    port: 2525,
+    secure: true,
+    auth: {
+        user: 'mtrisha380@gmail.com',
+        pass: 'maruti@$555',
+    },
+}; */
+
+
+
+
+
+//const transporter = nodemailer.createTransport(mailtrapConfig);
+
+
+
+/* (async() => {
+    try {
+        const info = await transporter.sendMail({
+            from: "mtrisha380@gmail.com",
+            to: "mtrisha580@gmail.com",
+            subject: "Password Reset",
+            text: "check this.."
+        });
+        console.log("Message sent: %s", info.messageId);
+    } catch (error) {
+        console.error("Error sending test email:", error);
+    }
+})();
+ */
 const generateAccessToken = (user) => {
-    return jwt.sign({ user }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "15m" });
     console.log("generateAccessToken", generateAccessToken);
+    return jwt.sign({ user }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "15m" });
 };
 
 const sendResetEmail = (user, resetToken) => {
@@ -20,10 +59,13 @@ const sendResetEmail = (user, resetToken) => {
             pass: process.env.EMAIL_PASS,
         },
     });
-    const resetLink = `${"http://google.com"}/reset-password?token=${resetToken}`;
+
+    const resetLink = `${"process.env.http://localhost:8080"}/reset-password?token=${resetToken}`;
+    console.log("resetToken", resetToken)
+
     const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: user.email,
+        from: '"Trisha   <mtrisha380@gmail.com>"',
+        to: "mtrisha580@gmail.com",
         subject: "Password Reset",
         text: `Click the following link to reset your password: ${resetLink}`,
     };
@@ -37,9 +79,6 @@ const sendResetEmail = (user, resetToken) => {
     });
 };
 
-
-
-
 const registerUser = async(req, res) => {
     console.log(req.body);
     const { username, email, password, confirmPassword } = req.body;
@@ -52,9 +91,6 @@ const registerUser = async(req, res) => {
         res.status(400);
         throw new Error("Passwords do not match.");
     }
-
-
-
 
 
     const userAvailable = await User.findOne({ email });
@@ -128,6 +164,7 @@ const forgotPassword = async(req, res) => {
 
 
     const resetToken = crypto.randomBytes(20).toString('hex');
+    //console.log("resetToken", resetToken)
     const resetTokenExpiry = Date.now() + 3600000;
     user.resetToken = resetToken;
     user.resetTokenExpiry = resetTokenExpiry;
@@ -135,8 +172,46 @@ const forgotPassword = async(req, res) => {
 
 
     sendResetEmail(user, resetToken);
-
+    //console.log("resetToken", resetToken);
     res.status(200).json({ message: "Password reset instructions sent to your email." });
+};
+
+
+//reset-password
+
+const resetPassword = async(req, res) => {
+    const { email, resetToken, newPassword } = req.body;
+    console.log("resetToken", resetToken);
+
+    try {
+        const user = await User.findOne({
+            email,
+            resetToken,
+            resetTokenExpiry: { $gt: Date.now() },
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid or expired token." });
+        }
+
+
+        console.log("newPassword:", newPassword);
+
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+
+        user.password = hashedPassword;
+        user.resetToken = 1;
+        user.resetTokenExpiry = 1;
+
+        await user.save();
+
+        res.status(200).json({ message: "Password reset successfully." });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
 };
 
 
@@ -145,4 +220,5 @@ const forgotPassword = async(req, res) => {
 
 
 
-module.exports = { registerUser, loginUser, forgotPassword };
+
+module.exports = { registerUser, loginUser, forgotPassword, resetPassword };
